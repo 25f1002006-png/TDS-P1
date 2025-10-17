@@ -5,6 +5,10 @@ import os, json, base64, requests, hashlib, time
 
 app = FastAPI(title="LLM Code Deployment API")
 
+STUDENT_SECRET = os.getenv("TDS_SECRET")
+GITHUB_TOKEN = os.getenv("GITHUB_TOKEN")
+GITHUB_USERNAME = os.getenv("GITHUB_USERNAME")
+AIPROXY_TOKEN = os.getenv("AIPROXY_TOKEN")
 
 if not all([STUDENT_SECRET, GITHUB_TOKEN, GITHUB_USERNAME, AIPROXY_TOKEN]):
     raise RuntimeError("Missing required environment variables")
@@ -92,3 +96,4 @@ async def handle_request(req: Request):
 
 
     return JSONResponse({"status": "ok", "repo": repo_url, "pages_url": pages_url})
+
