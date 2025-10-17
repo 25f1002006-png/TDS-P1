@@ -1,6 +1,6 @@
 from fastapi import FastAPI, Request, HTTPException
 from fastapi.responses import JSONResponse
-from github import Github, UnknownObjectException
+from github import Github, UnknownObjectException, GithubException
 import os, json, base64, requests, hashlib, time
 from dotenv import load_dotenv
 
@@ -44,13 +44,17 @@ def upsert_file_in_repo(repo, file_path, content, commit_message):
             content=content,
             sha=file_contents.sha
         )
-    except UnknownObjectException:
-        print(f"Creating file: {file_path}")
-        repo.create_file(
-            path=file_path,
-            message=commit_message,
-            content=content
-        )
+    except GithubException as e:
+        if e.status == 404:
+            print(f"Creating file (404 received): {file_path}")
+            repo.create_file(
+                path=file_path,
+                message=commit_message,
+                content=content
+            )
+        else:
+            print(f"Failed to upsert {file_path}: {e}")
+            raise
     except Exception as e:
         print(f"Failed to upsert {file_path}: {e}")
         raise
@@ -112,8 +116,11 @@ async def handle_request(req: Request):
     try:
         readme_contents = repo.get_contents(readme_path)
         old_readme = readme_contents.decoded_content.decode('utf-8')
-    except UnknownObjectException:
-        old_readme = f"# {task}\n\nAuto-generated via LLM."
+    except GithubException as e:
+        if e.status == 404:
+             old_readme = f"# {task}\n\nAuto-generated via LLM."
+        else:
+             raise
     
     new_readme = f"{old_readme}\n\n## Round {round_}\n\nBrief:\n{brief}"
     upsert_file_in_repo(repo, readme_path, new_readme, readme_commit_msg)
@@ -135,8 +142,11 @@ async def handle_request(req: Request):
         try:
             old_code_contents = repo.get_contents(index_path)
             old_code = old_code_contents.decoded_content.decode('utf-8')
-        except UnknownObjectException:
-            old_code = ""
+        except GithubException as e:
+            if e.status == 404:
+                old_code = ""
+            else:
+                raise
         
         prompt = f"Here is the existing code for 'index.html':\n\n```html\n{old_code}\n```\n\nNow, please modify this code to implement the following new requirement: {brief}\n\nProvide only the full, complete, updated HTML/JS code snippet."
         new_llm_code = call_llm(prompt)
