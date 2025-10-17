@@ -104,10 +104,15 @@ async def handle_request(req: Request):
     try:
         repo = user.create_repo(repo_name, private=False, auto_init=False)
         print(f"Created new repo: {repo_name}")
-    except Exception:
-        repo = user.get_repo(f"{GITHUB_USERNAME}/{repo_name}")
-        print(f"Found existing repo: {repo_name}")
-
+    except GithubException as e:
+        if e.status == 422 and e.data and "name already exists" in str(e.data.get("errors", "")):
+            print(f"Repo '{repo_name}' already exists. Fetching it.")
+            repo = user.get_repo(repo_name) 
+        else:
+            raise e
+    except Exception as e:
+        print(f"An unexpected error occurred: {e}")
+        raise
     license_text = "MIT License\n\nCopyright (c) 2025 Student"
     upsert_file_in_repo(repo, "LICENSE", license_text, "Add/Update MIT License")
 
@@ -213,3 +218,4 @@ async def handle_request(req: Request):
         delay *= 2
     
     raise HTTPException(status_code=500, detail="Evaluation notification failed after multiple retries.")
+
