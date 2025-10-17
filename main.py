@@ -5,10 +5,6 @@ import os, json, base64, requests, hashlib, time
 
 app = FastAPI(title="LLM Code Deployment API")
 
-STUDENT_SECRET = os.getenv("tds-powpowhello-worldpowpow-2025")
-GITHUB_TOKEN = os.getenv("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")
-GITHUB_USERNAME = os.getenv("25f1002006-png")
-AIPROXY_TOKEN = os.getenv("https://aipipe.org/openai/v1/chat/completions")
 
 if not all([STUDENT_SECRET, GITHUB_TOKEN, GITHUB_USERNAME, AIPROXY_TOKEN]):
     raise RuntimeError("Missing required environment variables")
@@ -93,5 +89,6 @@ async def handle_request(req: Request):
     )
     if resp.status_code != 200:
         raise HTTPException(status_code=500, detail=f"Eval notify failed: {resp.text}")
+
 
     return JSONResponse({"status": "ok", "repo": repo_url, "pages_url": pages_url})
